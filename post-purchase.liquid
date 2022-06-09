@@ -22,72 +22,71 @@ fbq('init', '172180310263417');
   gtag('config', 'UA-167432876-2');
 </script>
 <script>
-(function() {
-  // make sure the initial conversion isn't tracked twice
-  if (!Shopify.wasPostPurchasePageSeen) {
-    var order = window.Shopify.order;
+  (function() {
+    // make sure the initial conversion isn't tracked twice
+    if (!Shopify.wasPostPurchasePageSeen) {
+      var order = window.Shopify.order;
 
-    // track initial conversion
-    gtag('event', 'originalorder', {
-      transaction_id: order.number,
-      value: order.lineItems.finalLinePrice,
-      currency: order.currency,
-      items: order.lineItems.map(function(item) {
-        return {
-          id: item.id,
-          name: item.title,
-          category: item.product.type,
-          price: item.price,
-          quantity: item.quantity,
-          variant: item.variant.sku,
-        };
-      }),
-    });
-  }
-
-  Shopify.on('CheckoutAmended', function(newOrder, previousOrder) {
-    // identify which items were recently added, if any
-    var oldItems = previousOrder.lineItems.map(function (line) { return line.id; });
-
-    var addedItems = newOrder.lineItems.filter(
-      function (line) { return oldItems.indexOf(line.id) < 0; }
-    );
-
-    // no new items were added, so we skip conversion tracking
-    if (addedItems.length === 0) {
-      return;
+      // track initial conversion
+      gtag('event', 'originalorder', {
+        transaction_id: order.number,
+        value: order.lineItems.finalLinePrice,
+        currency: order.currency,
+        items: order.lineItems.map(function(item) {
+          return {
+            id: item.id,
+            name: item.title,
+            category: item.product.type,
+            price: item.price,
+            quantity: item.quantity,
+            variant: item.variant.sku,
+          };
+        }),
+      });
     }
 
-    // track additional purchase
-    gtag('event', 'purchase', {
-      affiliation: 'My Shopify Store',
-      transaction_id: Number(order.id).toString(),
-      value: order.totalPrice,
-      currency: order.currency,
-      items: addedItems.map(function (item) {
-        return {
-          id: Number(item.id).toString(),
-          name: item.title,
-          category: item.product.type,
-          price: item.price,
-          quantity: item.quantity,
-          variant: Number(item.variant.sku).toString(),
-        };
-      }),
+    Shopify.on('CheckoutAmended', function(newOrder, previousOrder) {
+      // identify which items were recently added, if any
+      var oldItems = previousOrder.lineItems.map(function (line) { return line.id; });
+
+      var addedItems = newOrder.lineItems.filter(
+        function (line) { return oldItems.indexOf(line.id) < 0; }
+      );
+
+      // no new items were added, so we skip conversion tracking
+      if (addedItems.length === 0) {
+        return;
+      }
+
+      // track additional purchase
+      gtag('event', 'purchase', {
+        transaction_id: Number(order.id).toString(),
+        value: order.totalPrice,
+        currency: order.currency,
+        items: addedItems.map(function (item) {
+          return {
+            id: Number(item.id).toString(),
+            name: item.title,
+            category: item.product.type,
+            price: item.price,
+            quantity: item.quantity,
+            variant: Number(item.variant.sku).toString(),
+          };
+        }),
+      });
+
+      window.uetq = window.uetq || []; 
+      window.uetq.push('purchase', '', { 'revenue_value': order.totalPrice, 'currency': order.currency });
     });
 
-    window.uetq = window.uetq || []; 
-    window.uetq.push('purchase', '', { 'revenue_value': order.totalPrice, 'currency': order.currency });
+
+    fbq('track', 'Purchase', {
+      content_type: 'product_group',
+      content_ids: [newItem.product.id],
+      value: newItem.finalPrice,
+      num_items: newItem.quantity,
+      currency: newOrder.currency
+    });
+
   });
-
-
-  fbq('track', 'Purchase', {
-    content_type: 'product_group',
-    content_ids: [newItem.product.id],
-    value: newItem.finalPrice,
-    num_items: newItem.quantity,
-    currency: newOrder.currency
-  });
-
-});
 </script>
