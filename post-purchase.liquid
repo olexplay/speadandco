@@ -43,6 +43,8 @@ fbq('init', '172180310263417');
           };
         }),
       });
+	  window.uetq = window.uetq || []; 
+      window.uetq.push('purchase', '', { 'revenue_value': order.lineItems.finalLinePrice, 'currency': order.currency });
     }
 
     Shopify.on('CheckoutAmended', function(newOrder, previousOrder) {
@@ -60,33 +62,31 @@ fbq('init', '172180310263417');
 
       // track additional purchase
       gtag('event', 'purchase', {
-        transaction_id: Number(order.id).toString(),
-        value: order.totalPrice,
+        transaction_id: order.number,
+        value: addedItems.finalLinePrice,
         currency: order.currency,
         items: addedItems.map(function (item) {
           return {
-            id: Number(item.id).toString(),
+            id: item.id,
             name: item.title,
             category: item.product.type,
             price: item.price,
             quantity: item.quantity,
-            variant: Number(item.variant.sku).toString(),
+            variant: item.variant.sku,
           };
         }),
       });
 
       window.uetq = window.uetq || []; 
-      window.uetq.push('postpurchase', '', { 'revenue_value': order.totalPrice, 'currency': order.currency });
-    });
-
-
-    fbq('track', 'Purchase', {
+      window.uetq.push('postpurchase', '', { 'revenue_value': addedItems.finalLinePrice, 'currency': order.currency });
+	  
+	  fbq('track', 'Purchase', {
       content_type: 'product_group',
-      content_ids: [newItem.product.id],
-      value: newItem.finalPrice,
-      num_items: newItem.quantity,
+      content_ids: [addedItems.product.id],
+      value: addedItems.finalPrice,
+      num_items: addedItems.quantity,
       currency: newOrder.currency
+		});
     });
-
   });
 </script>
