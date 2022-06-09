@@ -1,0 +1,41 @@
+<script>(function(w,d,t,r,u){var f,n,i;w[u]=w[u]||[],f=function(){var o={ti:"148021727"};o.q=w[u],w[u]=new UET(o),w[u].push("pageLoad")},n=d.createElement(t),n.src=r,n.async=1,n.onload=n.onreadystatechange=function(){var s=this.readyState;s&&s!=="loaded"&&s!=="complete"||(f(),n.onload=n.onreadystatechange=null)},i=d.getElementsByTagName(t)[0],i.parentNode.insertBefore(n,i)})(window,document,"script","//bat.bing.com/bat.js","uetq");</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-167432876-2"></script>
+<script>
+(function() {
+  // make sure the initial conversion isn't tracked twice
+  {% if first_time_accessed == false or post_purchase_page_accessed == true %}
+    return;
+  {% endif %}
+  // set up google analytics
+
+  window.dataLayer = window.dataLayer || [];
+
+  function gtag() {
+    dataLayer.push(arguments);
+  }
+
+  gtag('js', new Date());
+  gtag('config', 'UA-167432876-2');
+
+  // track initial conversion
+  var order = window.Shopify.order;
+
+  gtag('event', 'purchase', {
+    transaction_id: order.number,
+    value: order.lineItems.finalLinePrice,
+    currency: order.currency,
+    items: order.lineItems.map((item) => ({
+      id: item.id,
+      name: item.title,
+      category: item.product.type,
+      price: item.price,
+      quantity: item.quantity,
+      variant: item.variant.sku,
+    })),
+  });
+
+  window.uetq = window.uetq || []; 
+  window.uetq.push('purchase', '', { 'revenue_value': {{ total_price | money_without_currency }}, 'currency': '{{ shop.currency }}' });
+
+})();
+</script>
