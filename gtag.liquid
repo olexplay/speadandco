@@ -1,0 +1,146 @@
+<script>
+
+	var upsellCount = 0;
+	(function() {
+
+	if (Shopify.wasPostPurchasePageSeen) {
+			onCheckout(window.Shopify.order, window.Shopify);
+	}
+	
+	Shopify.on('CheckoutAmended', function (newOrder, initialOrder) {
+			onCheckoutAmended(newOrder, initialOrder, window.Shopify);
+	});
+
+	function onCheckout(initialOrder, shopifyObject) {
+			window.dataLayer = window.dataLayer || [];
+			pushDLPurchase(initialOrder, initialOrder.lineItems, false, null, shopifyObject);
+	}
+	
+
+	function onCheckoutAmended(upsellOrder, initialOrder, shopifyObject) {
+
+			upsellCount++;
+
+			var initialItemIds = initialOrder.lineItems.map(function (line) { return line.id; });
+			var addedItems = upsellOrder.lineItems.filter(
+					function (line) { return initialItemIds.indexOf(line.id) < 0; }
+			);
+
+			if (addedItems.length === 0) return;
+			pushDLPurchase(upsellOrder, addedItems, true, initialOrder, shopifyObject);
+	}
+	
+	function pushDLPurchase(order, addedItems, isUpsell, initialOrder, shopifyObject) {
+			window.dataLayer.push({
+					'event': isUpsell ? 'dl_upsell_purchase' : 'dl_purchase',
+					'event_id': getOrderId(order.id, isUpsell),
+					'user_properties': getUserProperties(order),
+					'ecommerce': {
+							'purchase': {
+									'actionField': getActionField(order, isUpsell, initialOrder, addedItems, shopifyObject),
+									'products': getLineItems(addedItems),
+							},
+							'currencyCode': order.currency,
+					},
+			});
+	}
+
+	function getUserProperties(data) {
+			return {
+					'customer_id': data.customer.id,
+					'customer_email': data.customer.email,
+					'customer_first_name': data.customer.firstName,
+					'customer_last_name': data.customer.lastName,
+			}
+	}
+	
+
+	function getLineItems(lineItems) {
+			return lineItems.map(function (item) {
+					return {
+							'category': item.product.type,
+							'variant_id': item.variant.id.toString(),
+							'product_id': Number(item.product.id).toString(),
+							'id': item.variant.sku,
+							// We don't get variant title details
+							'variant': item.title,
+							'name': item.title,
+							'price': item.price.toString(),
+							'quantity': item.quantity.toString(),
+							// Not available
+							// 'brand': orderItem.brand,
+					}
+			});
+	}
+	
+	function getActionField(order, isUpsell, initialOrder, addedItems, shopifyObject) {
+			var revenue = isUpsell ? getAdditionalRevenue(order, initialOrder) : order.totalPrice;
+			var subtotal = isUpsell ? getAdditionalSubtotal(order, initialOrder) : order.subtotalPrice;
+			try {
+					affiliation = new URL(shopifyObject.pageUrl).hostname;
+			} catch (e){
+					affiliation = '';
+			}
+			return {
+					'action': "purchase",
+					'affiliation': affiliation,
+					'id': getOrderId(order.id, isUpsell).toString(),
+					'order_name': getOrderId(order.number, isUpsell).toString(),
+					'discount_amount': getDiscountAmount(order, isUpsell, addedItems),
+					'shipping': (parseFloat(revenue) - parseFloat(subtotal)).toString(),
+					'tax': '0',
+					'revenue': revenue,
+					'sub_total': subtotal,
+			};
+	}
+	
+	function getDiscountAmount(shopifyOrder, isUpsell, addedItems) {
+			if (shopifyOrder.discounts === null || typeof shopifyOrder.discounts === 'undefined') return '0';
+			if (shopifyOrder.discounts.length === 0) return '0';
+			if (!isUpsell) {
+					return shopifyOrder.discounts.reduce(function (acc, discount) {
+							return acc += parseFloat(discount.amount);
+					}, 0).toFixed(2).toString();
+			} else {
+					return addedItems.reduce(function (acc, addedItem) {
+							return acc += parseFloat(addedItem.lineLevelTotalDiscount);
+					}, 0).toFixed(2).toString();
+			}
+	
+	}
+	
+	function getOrderId(orderId, isUpsell) {
+			return isUpsell ? orderId.toString() + '-US' + upsellCount.toString() : orderId;
+	}
+	
+	
+	function getAdditionalRevenue(newOrder, initialOrder) {
+			return (parseFloat(newOrder.totalPrice) - parseFloat(initialOrder.totalPrice)).toFixed(2);
+	}
+	
+	function getAdditionalSubtotal(newOrder, initialOrder) {
+			return (parseFloat(newOrder.subtotalPrice) - parseFloat(initialOrder.subtotalPrice)).toFixed(2);
+	}
+	
+	function test() {
+			onCheckoutAmended(newOrder, initialOrder);
+	}
+	
+	try {
+			module.exports = exports = {
+					onCheckoutAmended: onCheckoutAmended,
+					onCheckout: onCheckout,
+					resetUpsellCount: function(){upsellCount = 0;},
+			};
+	} catch (e) { }
+	
+	(function (w, d, s, l, i) {
+			w[l] = w[l] || []; w[l].push({
+					'gtm.start':
+							new Date().getTime(), event: 'gtm.js'
+			}); var f = d.getElementsByTagName(s)[0],
+					j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
+							'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+	})(window, document, 'script', 'dataLayer', 'GTM-TBDBVRB');
+	})();
+	</script>
